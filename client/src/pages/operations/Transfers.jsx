@@ -1,0 +1,141 @@
+import { useEffect, useState } from "react";
+import { getTransfers, createTransfer, validateTransfer } from "../../api/operations";
+import { getProducts } from "../../api/products";
+import Layout from "../../components/Layout";
+import toast from "react-hot-toast";
+import { Plus, CheckCircle } from "lucide-react";
+
+const locations = [
+  { id: 1, name: "Main Store" }, { id: 2, name: "Rack A" },
+  { id: 3, name: "Rack B" },    { id: 4, name: "Production Floor" },
+  { id: 5, name: "Finished Goods Area" },
+];
+
+export default function Transfers() {
+  const [transfers, setTransfers] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({ from_location_id: 1, to_location_id: 4, lines: [{ product_id: "", quantity: 1 }] });
+
+  const load = () => getTransfers().then((r) => setTransfers(r.data));
+
+  useEffect(() => { load(); getProducts().then((r) => setProducts(r.data)); }, []);
+
+  const addLine = () => setForm({ ...form, lines: [...form.lines, { product_id: "", quantity: 1 }] });
+  const updateLine = (i, key, val) => {
+    const lines = [...form.lines]; lines[i][key] = val; setForm({ ...form, lines });
+  };
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    try {
+      await createTransfer(form);
+      toast.success("Transfer created");
+      setShowModal(false);
+      load();
+    } catch (err) { toast.error(err.response?.data?.error || "Failed"); }
+  };
+
+  const handleValidate = async (id) => {
+    try {
+      await validateTransfer(id);
+      toast.success("Stock moved!");
+      load();
+    } catch (err) { toast.error(err.response?.data?.error || "Insufficient stock"); }
+  };
+
+  return (
+    <Layout>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Transfers</h1>
+          <p className="text-sm text-gray-500">Move stock between locations</p>
+        </div>
+        <button onClick={() => setShowModal(true)}
+          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
+          <Plus size={16} /> New Transfer
+        </button>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 text-gray-600 text-left">
+            <tr>{["Reference","From","To","Status","Created",""].map(h => (
+              <th key={h} className="px-4 py-3 font-medium">{h}</th>
+            ))}</tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {transfers.map((t) => (
+              <tr key={t.id} className="hover:bg-gray-50">
+                <td className="px-4 py-3 font-mono text-gray-700">{t.reference}</td>
+                <td className="px-4 py-3 text-gray-600">{t.from_location_name}</td>
+                <td className="px-4 py-3 text-gray-600">{t.to_location_name}</td>
+                <td className="px-4 py-3">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${t.status === "done" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
+                    {t.status}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-gray-400">{new Date(t.created_at).toLocaleDateString()}</td>
+                <td className="px-4 py-3">
+                  {t.status !== "done" && (
+                    <button onClick={() => handleValidate(t.id)}
+                      className="flex items-center gap-1 text-green-600 hover:text-green-700 text-xs font-medium">
+                      <CheckCircle size={14} /> Validate
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {transfers.length === 0 && (
+              <tr><td colSpan={6} className="text-center py-10 text-gray-400">No transfers yet</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg font-semibold mb-4">New Transfer</h2>
+            <form onSubmit={handleCreate} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                {[["from_location_id","From"],["to_location_id","To"]].map(([key, label]) => (
+                  <div key={key}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+                    <select value={form[key]} onChange={(e) => setForm({ ...form, [key]: parseInt(e.target.value) })}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                      {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                    </select>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-gray-700">Products</label>
+                  <button type="button" onClick={addLine} className="text-xs text-indigo-600 hover:underline">+ Add line</button>
+                </div>
+                {form.lines.map((line, i) => (
+                  <div key={i} className="flex gap-2 mb-2">
+                    <select required value={line.product_id} onChange={(e) => updateLine(i, "product_id", e.target.value)}
+                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                      <option value="">Select product</option>
+                      {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                    <input type="number" min="1" required value={line.quantity}
+                      onChange={(e) => updateLine(i, "quantity", e.target.value)}
+                      className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button type="submit" className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium">Create</button>
+                <button type="button" onClick={() => setShowModal(false)}
+                  className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </Layout>
+  );
+}

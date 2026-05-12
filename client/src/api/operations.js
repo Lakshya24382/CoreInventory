@@ -1,0 +1,14 @@
+import api from "./axios";
+export const getKPIs = () => api.get("/dashboard/kpis");
+export const getReceipts = () => api.get("/receipts");
+export const createReceipt = (data) => api.post("/receipts", data);
+export const validateReceipt = (id) => api.post(`/receipts/${id}/validate`);
+export const getDeliveries = () => api.get("/deliveries");
+export const createDelivery = (data) => api.post("/deliveries", data);
+export const validateDelivery = (id) => api.post(`/deliveries/${id}/validate`);
+export const getTransfers = () => api.get("/transfers");
+export const createTransfer = (data) => api.post("/transfers", data);
+export const validateTransfer = (id) => api.post(`/transfers/${id}/validate`);
+export const getAdjustments = () => api.get("/adjustments");
+export const createAdjustment = (data) => api.post("/adjustments", data);
+export const validateAdjustment = (id) => api.post(`/adjustments/${id}/validate`);
