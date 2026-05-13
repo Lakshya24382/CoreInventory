@@ -6,16 +6,19 @@ import {
 import Layout from "../../components/Layout";
 import toast from "react-hot-toast";
 import { Plus, Trash2, Search, Pencil } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 const empty = { name: "", sku: "", category_id: "", unit_of_measure: "units", reorder_level: 0 };
 
 export default function Products() {
-  const [products, setProducts]   = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [form, setForm]           = useState(empty);
-  const [editingId, setEditingId] = useState(null);
-  const [search, setSearch]       = useState("");
-  const [showModal, setShowModal] = useState(false);
+  const { user }                          = useAuth();
+  const isManager                         = user?.role === "manager";
+  const [products, setProducts]           = useState([]);
+  const [categories, setCategories]       = useState([]);
+  const [form, setForm]                   = useState(empty);
+  const [editingId, setEditingId]         = useState(null);
+  const [search, setSearch]               = useState("");
+  const [showModal, setShowModal]         = useState(false);
 
   const load = () => getProducts().then((r) => setProducts(r.data));
 
@@ -82,12 +85,16 @@ export default function Products() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Products</h1>
-          <p className="text-gray-500 text-sm">Manage your product catalog</p>
+          <p className="text-gray-500 text-sm">
+            {isManager ? "Manage your product catalog" : "Browse the product catalog"}
+          </p>
         </div>
-        <button onClick={openCreate}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
-          <Plus size={16} /> New Product
-        </button>
+        {isManager && (
+          <button onClick={openCreate}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
+            <Plus size={16} /> New Product
+          </button>
+        )}
       </div>
 
       <div className="relative mb-4">
@@ -101,7 +108,9 @@ export default function Products() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-600 text-left">
             <tr>
-              {["Name", "SKU", "Category", "UoM", "Reorder Level", "Stock", ""].map((h) => (
+              {["Name", "SKU", "Category", "UoM", "Reorder Level", "Stock",
+                ...(isManager ? [""] : [])
+              ].map((h) => (
                 <th key={h} className="px-4 py-3 font-medium">{h}</th>
               ))}
             </tr>
@@ -115,27 +124,33 @@ export default function Products() {
                 <td className="px-4 py-3 text-gray-500">{p.unit_of_measure}</td>
                 <td className="px-4 py-3 text-gray-500">{p.reorder_level}</td>
                 <td className="px-4 py-3">
-                  <span className={`font-semibold ${parseFloat(p.total_stock) <= p.reorder_level ? "text-red-600" : "text-green-600"}`}>
+                  <span className={`font-semibold ${
+                    parseFloat(p.total_stock) <= p.reorder_level
+                      ? "text-red-600" : "text-green-600"
+                  }`}>
                     {p.total_stock}
                   </span>
                 </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <button onClick={() => openEdit(p)}
-                      className="text-gray-400 hover:text-indigo-500 transition-colors">
-                      <Pencil size={15} />
-                    </button>
-                    <button onClick={() => handleDelete(p.id)}
-                      className="text-gray-400 hover:text-red-500 transition-colors">
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </td>
+                {isManager && (
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => openEdit(p)}
+                        className="text-gray-400 hover:text-indigo-500 transition-colors">
+                        <Pencil size={15} />
+                      </button>
+                      <button onClick={() => handleDelete(p.id)}
+                        className="text-gray-400 hover:text-red-500 transition-colors">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="text-center py-10 text-gray-400">
+                <td colSpan={isManager ? 7 : 6}
+                  className="text-center py-10 text-gray-400">
                   No products found
                 </td>
               </tr>
@@ -144,7 +159,7 @@ export default function Products() {
         </table>
       </div>
 
-      {showModal && (
+      {isManager && showModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
             <h2 className="text-lg font-semibold mb-4">
