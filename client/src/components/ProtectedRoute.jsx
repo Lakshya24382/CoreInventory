@@ -6,5 +6,5 @@ export default function ProtectedRoute({ children }) {
   if (loading) return (
     <div className="flex items-center justify-center h-screen text-gray-500">Loading...</div>
   );
-  return user ? children : <Navigate to="/" />;
+  return user ? children : <Navigate to="/" replace />;
 }

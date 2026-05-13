@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 
 const links = [
-  { to: "/",            icon: LayoutDashboard, label: "Dashboard" },
+  { to: "/dashboard",            icon: LayoutDashboard, label: "Dashboard" },
   { to: "/products",    icon: Package,         label: "Products" },
   { to: "/receipts",    icon: ArrowDownCircle, label: "Receipts" },
   { to: "/deliveries",  icon: ArrowUpCircle,   label: "Deliveries" },
@@ -31,7 +31,7 @@ export default function Sidebar() {
 
       <nav className="flex-1 p-3 space-y-1">
         {links.map(({ to, icon: Icon, label }) => (
-          <NavLink key={to} to={to} end={to === "/"}
+          <NavLink key={to} to={to}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                 isActive ? "bg-indigo-600 text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white"
