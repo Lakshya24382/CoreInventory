@@ -182,3 +182,62 @@ module.exports = {
   forgotPassword, verifyOTP, resetPassword,
   updateProfile, changePassword
 };
+
+// EMPLOYEE REGISTRATION — uses employee_id + temp password to set real name + email
+const employeeRegister = async (req, res) => {
+  const { employee_id, temp_password, name, email, new_password } = req.body;
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const result = await client.query(
+      "SELECT * FROM users WHERE employee_id = $1 AND role = 'staff'",
+      [employee_id]
+    );
+    const user = result.rows[0];
+    if (!user) return res.status(404).json({ error: "Invalid Employee ID" });
+
+    const match = await bcrypt.compare(temp_password, user.password_hash);
+    if (!match) return res.status(400).json({ error: "Invalid temporary password" });
+
+    if (!user.is_temp_password)
+      return res.status(400).json({ error: "Account already registered" });
+
+    // Check email not already taken
+    const emailCheck = await client.query(
+      "SELECT id FROM users WHERE email = $1 AND id != $2", [email, user.id]
+    );
+    if (emailCheck.rows[0])
+      return res.status(400).json({ error: "Email already in use" });
+
+    const password_hash = await bcrypt.hash(new_password, 10);
+
+    const updated = await client.query(
+      `UPDATE users SET name = $1, email = $2, password_hash = $3, is_temp_password = FALSE
+       WHERE id = $4 RETURNING id, name, email, role, employee_id`,
+      [name, email, password_hash, user.id]
+    );
+
+    await client.query("COMMIT");
+
+    const token = jwt.sign(
+      { id: updated.rows[0].id, email: updated.rows[0].email, role: updated.rows[0].role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.json({ token, user: updated.rows[0] });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+};
+
+module.exports = {
+  register, login, getMe,
+  forgotPassword, verifyOTP, resetPassword,
+  updateProfile, changePassword,
+  employeeRegister
+};

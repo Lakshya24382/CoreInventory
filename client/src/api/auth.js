@@ -7,3 +7,7 @@ export const verifyOTP      = (data) => api.post("/auth/verify-otp",      data);
 export const resetPassword  = (data) => api.post("/auth/reset-password",  data);
 export const updateProfile  = (data) => api.put("/auth/profile", data);
 export const changePassword = (data) => api.put("/auth/change-password", data);
+export const employeeRegister = (data) => api.post("/auth/employee-register", data);
+export const getEmployees     = ()     => api.get("/employees");
+export const createEmployee   = ()     => api.post("/employees");
+export const deleteEmployee   = (id)   => api.delete(`/employees/${id}`);

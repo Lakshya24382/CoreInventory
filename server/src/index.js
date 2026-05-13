@@ -18,6 +18,7 @@ app.use("/api/deliveries",  require("./routes/deliveries"));
 app.use("/api/transfers",   require("./routes/transfers"));
 app.use("/api/adjustments", require("./routes/adjustments"));
 app.use("/api/moves", require("./routes/moves"));
+app.use("/api/employees", require("./routes/employees"));
 
 app.get("/", (req, res) => res.json({ message: "CoreInventory API is running" }));
 
