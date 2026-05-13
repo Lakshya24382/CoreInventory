@@ -5,6 +5,7 @@ import {
   ArrowUpCircle, ArrowLeftRight, ClipboardList,
   LogOut, User, Boxes
 } from "lucide-react";
+import { History } from "lucide-react";
 
 const links = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
@@ -13,6 +14,7 @@ const links = [
   { to: "/deliveries", icon: ArrowUpCircle, label: "Deliveries" },
   { to: "/transfers", icon: ArrowLeftRight, label: "Transfers" },
   { to: "/adjustments", icon: ClipboardList, label: "Adjustments" },
+  { to: "/moves", icon: History, label: "Move History" },
 ];
 
 export default function Sidebar() {

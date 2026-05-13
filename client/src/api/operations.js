@@ -12,3 +12,4 @@ export const validateTransfer = (id) => api.post(`/transfers/${id}/validate`);
 export const getAdjustments = () => api.get("/adjustments");
 export const createAdjustment = (data) => api.post("/adjustments", data);
 export const validateAdjustment = (id) => api.post(`/adjustments/${id}/validate`);
+export const getMoves = () => api.get("/moves");

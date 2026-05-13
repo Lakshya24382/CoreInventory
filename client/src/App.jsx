@@ -11,6 +11,7 @@ import Receipts from "./pages/operations/Receipts";
 import Deliveries from "./pages/operations/Deliveries";
 import Transfers from "./pages/operations/Transfers";
 import Adjustments from "./pages/operations/Adjustments";
+import MoveHistory from "./pages/operations/MoveHistory";
 
 const Protected = ({ children }) => (
   <ProtectedRoute>{children}</ProtectedRoute>
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="/receipts"   element={<Protected><Receipts /></Protected>} />
           <Route path="/deliveries" element={<Protected><Deliveries /></Protected>} />
           <Route path="/transfers"  element={<Protected><Transfers /></Protected>} />
+          <Route path="/moves" element={<Protected><MoveHistory /></Protected>} />
           <Route path="/adjustments" element={<Protected><Adjustments /></Protected>} />
         </Routes>
       </BrowserRouter>
