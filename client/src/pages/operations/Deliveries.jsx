@@ -4,8 +4,12 @@ import { getProducts } from "../../api/products";
 import Layout from "../../components/Layout";
 import toast from "react-hot-toast";
 import { Plus, CheckCircle } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 export default function Deliveries() {
+  const { user } = useAuth();
+  const isManager = user?.role === "manager";
+
   const [deliveries, setDeliveries] = useState([]);
   const [products, setProducts] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -81,10 +85,10 @@ export default function Deliveries() {
                 </td>
                 <td className="px-4 py-3 text-gray-400">{new Date(d.created_at).toLocaleDateString()}</td>
                 <td className="px-4 py-3">
-                  {d.status !== "done" && (
+                  {d.status !== "done" && isManager && (
                     <button onClick={() => handleValidate(d.id)}
                       className="flex items-center gap-1 text-green-600 hover:text-green-700 text-xs font-medium">
-                      <CheckCircle size={14} /> Validate
+                        <CheckCircle size={14} /> Validate
                     </button>
                   )}
                 </td>

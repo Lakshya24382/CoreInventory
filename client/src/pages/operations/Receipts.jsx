@@ -4,6 +4,7 @@ import { getProducts } from "../../api/products";
 import Layout from "../../components/Layout";
 import toast from "react-hot-toast";
 import { Plus, CheckCircle } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 const statusColors = {
   draft: "bg-gray-100 text-gray-600",
@@ -11,6 +12,9 @@ const statusColors = {
 };
 
 export default function Receipts() {
+  const { user } = useAuth();
+  const isManager = user?.role === "manager";
+
   const [receipts, setReceipts] = useState([]);
   const [products, setProducts] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -70,7 +74,7 @@ export default function Receipts() {
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-600 text-left">
-            <tr>{["Reference","Supplier","Status","Created",""].map(h => (
+            <tr>{["Reference", "Supplier", "Status", "Created", ""].map(h => (
               <th key={h} className="px-4 py-3 font-medium">{h}</th>
             ))}</tr>
           </thead>
@@ -86,7 +90,7 @@ export default function Receipts() {
                 </td>
                 <td className="px-4 py-3 text-gray-400">{new Date(r.created_at).toLocaleDateString()}</td>
                 <td className="px-4 py-3">
-                  {r.status !== "done" && (
+                  {r.status !== "done" && isManager && (
                     <button onClick={() => handleValidate(r.id)}
                       className="flex items-center gap-1 text-green-600 hover:text-green-700 text-xs font-medium">
                       <CheckCircle size={14} /> Validate

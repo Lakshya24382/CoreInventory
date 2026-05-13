@@ -4,6 +4,7 @@ import { getProducts } from "../../api/products";
 import Layout from "../../components/Layout";
 import toast from "react-hot-toast";
 import { Plus, CheckCircle } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 const locations = [
   { id: 1, name: "Main Store" }, { id: 2, name: "Rack A" },
@@ -12,6 +13,8 @@ const locations = [
 ];
 
 export default function Adjustments() {
+  const { user } = useAuth();
+  const isManager = user?.role === "manager";
   const [adjustments, setAdjustments] = useState([]);
   const [products, setProducts] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -77,7 +80,7 @@ export default function Adjustments() {
                 </td>
                 <td className="px-4 py-3 text-gray-400">{new Date(a.created_at).toLocaleDateString()}</td>
                 <td className="px-4 py-3">
-                  {a.status !== "done" && (
+                  {a.status !== "done" && isManager && (
                     <button onClick={() => handleValidate(a.id)}
                       className="flex items-center gap-1 text-green-600 hover:text-green-700 text-xs font-medium">
                       <CheckCircle size={14} /> Validate
