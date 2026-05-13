@@ -3,12 +3,22 @@ import { useAuth } from "../context/AuthContext";
 import {
   LayoutDashboard, Package, ArrowDownCircle,
   ArrowUpCircle, ArrowLeftRight, ClipboardList,
-  LogOut, User, Boxes, History
+  LogOut, User, Boxes, History, Users
 } from "lucide-react";
 
-const links = [
-  { to: "/dashboard",            icon: LayoutDashboard, label: "Dashboard" },
+const managerLinks = [
+  { to: "/dashboard",   icon: LayoutDashboard, label: "Dashboard" },
+  { to: "/employees",   icon: Users,           label: "Employees" },
   { to: "/products",    icon: Package,         label: "Products" },
+  { to: "/receipts",    icon: ArrowDownCircle, label: "Receipts" },
+  { to: "/deliveries",  icon: ArrowUpCircle,   label: "Deliveries" },
+  { to: "/transfers",   icon: ArrowLeftRight,  label: "Transfers" },
+  { to: "/adjustments", icon: ClipboardList,   label: "Adjustments" },
+  { to: "/moves",       icon: History,         label: "Move History" },
+];
+
+const staffLinks = [
+  { to: "/dashboard",   icon: LayoutDashboard, label: "Dashboard" },
   { to: "/receipts",    icon: ArrowDownCircle, label: "Receipts" },
   { to: "/deliveries",  icon: ArrowUpCircle,   label: "Deliveries" },
   { to: "/transfers",   icon: ArrowLeftRight,  label: "Transfers" },
@@ -19,8 +29,9 @@ const links = [
 export default function Sidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const links = user?.role === "manager" ? managerLinks : staffLinks;
 
-  const handleLogout = () => { logout(); navigate("/login"); };
+  const handleLogout = () => { logout(); navigate("/"); };
 
   return (
     <aside className="w-60 min-h-screen bg-gray-900 text-white flex flex-col">
