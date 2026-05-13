@@ -48,12 +48,18 @@ export default function Login() {
             <input type="password" required value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            <div className="flex justify-end mt-1">
+              <Link to="/forgot-password" className="text-xs text-indigo-600 hover:underline">
+                Forgot password?
+              </Link>
+            </div>
           </div>
           <button type="submit" disabled={loading}
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-lg text-sm transition-colors disabled:opacity-50">
             {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>
+
         <p className="text-center text-sm text-gray-500 mt-4">
           No account? <Link to="/register" className="text-indigo-600 hover:underline">Register</Link>
         </p>
