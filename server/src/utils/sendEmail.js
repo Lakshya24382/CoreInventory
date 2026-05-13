@@ -1,21 +1,10 @@
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  tls: {
-    rejectUnauthorized: false,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendOTPEmail = async (toEmail, otp) => {
-  await transporter.sendMail({
-    from: `"CoreInventory" <${process.env.EMAIL_USER}>`,
+  await resend.emails.send({
+    from: "CoreInventory <onboarding@resend.dev>",
     to: toEmail,
     subject: "Your password reset OTP",
     html: `
@@ -25,7 +14,10 @@ const sendOTPEmail = async (toEmail, otp) => {
         <div style="background: #f3f4f6; border-radius: 8px; padding: 20px; text-align: center; margin: 20px 0;">
           <span style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #4f46e5;">${otp}</span>
         </div>
-        <p style="color: #6b7280; font-size: 14px;">This OTP expires in <strong>10 minutes</strong>. If you didn't request this, ignore this email.</p>
+        <p style="color: #6b7280; font-size: 14px;">
+          This OTP expires in <strong>10 minutes</strong>.
+          If you didn't request this, ignore this email.
+        </p>
       </div>
     `,
   });
