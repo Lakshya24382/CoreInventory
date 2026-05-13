@@ -76,17 +76,24 @@ const forgotPassword = async (req, res) => {
       return res.status(404).json({ error: "No account with that email" });
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const expires = new Date(Date.now() + 10 * 60 * 1000);
 
     await pool.query(
       "UPDATE users SET otp = $1, otp_expires_at = $2 WHERE email = $3",
       [otp, expires, email]
     );
 
-    await sendOTPEmail(email, otp);
+    // Add timeout so it doesn't hang forever
+    const emailPromise = sendOTPEmail(email, otp);
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Email timeout")), 10000)
+    );
+
+    await Promise.race([emailPromise, timeoutPromise]);
     res.json({ message: "OTP sent to your email" });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Email error:", err.message);
+    res.status(500).json({ error: "Failed to send email. Check your EMAIL_USER and EMAIL_PASS on Render." });
   }
 };
 
