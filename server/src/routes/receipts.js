@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const auth = require("../middleware/auth");
 const { getAll, getOne, create, validate } = require("../controllers/receiptController");
-const auth        = require("../middleware/auth");
 const managerOnly = require("../middleware/managerOnly");
 
 router.post("/:id/validate", auth, managerOnly, validate);
