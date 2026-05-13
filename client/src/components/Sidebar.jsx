@@ -19,6 +19,7 @@ const managerLinks = [
 
 const staffLinks = [
   { to: "/dashboard",   icon: LayoutDashboard, label: "Dashboard" },
+  { to: "/products",    icon: Package,         label: "Products" },
   { to: "/receipts",    icon: ArrowDownCircle, label: "Receipts" },
   { to: "/deliveries",  icon: ArrowUpCircle,   label: "Deliveries" },
   { to: "/transfers",   icon: ArrowLeftRight,  label: "Transfers" },
