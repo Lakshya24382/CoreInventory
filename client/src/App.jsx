@@ -13,6 +13,7 @@ import Transfers from "./pages/operations/Transfers";
 import Adjustments from "./pages/operations/Adjustments";
 import MoveHistory from "./pages/operations/MoveHistory";
 import ForgotPassword from "./pages/auth/ForgotPassword";
+import Profile from "./pages/Profile";
 
 const Protected = ({ children }) => (
   <ProtectedRoute>{children}</ProtectedRoute>
@@ -34,6 +35,7 @@ export default function App() {
           <Route path="/moves" element={<Protected><MoveHistory /></Protected>} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/adjustments" element={<Protected><Adjustments /></Protected>} />
+          <Route path="/profile" element={<Protected><Profile /></Protected>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

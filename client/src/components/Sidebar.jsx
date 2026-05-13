@@ -1,20 +1,19 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   LayoutDashboard, Package, ArrowDownCircle,
   ArrowUpCircle, ArrowLeftRight, ClipboardList,
-  LogOut, User, Boxes
+  LogOut, User, Boxes, History
 } from "lucide-react";
-import { History } from "lucide-react";
 
 const links = [
-  { to: "/", icon: LayoutDashboard, label: "Dashboard" },
-  { to: "/products", icon: Package, label: "Products" },
-  { to: "/receipts", icon: ArrowDownCircle, label: "Receipts" },
-  { to: "/deliveries", icon: ArrowUpCircle, label: "Deliveries" },
-  { to: "/transfers", icon: ArrowLeftRight, label: "Transfers" },
-  { to: "/adjustments", icon: ClipboardList, label: "Adjustments" },
-  { to: "/moves", icon: History, label: "Move History" },
+  { to: "/",            icon: LayoutDashboard, label: "Dashboard" },
+  { to: "/products",    icon: Package,         label: "Products" },
+  { to: "/receipts",    icon: ArrowDownCircle, label: "Receipts" },
+  { to: "/deliveries",  icon: ArrowUpCircle,   label: "Deliveries" },
+  { to: "/transfers",   icon: ArrowLeftRight,  label: "Transfers" },
+  { to: "/adjustments", icon: ClipboardList,   label: "Adjustments" },
+  { to: "/moves",       icon: History,         label: "Move History" },
 ];
 
 export default function Sidebar() {
@@ -45,10 +44,11 @@ export default function Sidebar() {
       </nav>
 
       <div className="p-3 border-t border-gray-700 space-y-1">
-        <div className="flex items-center gap-3 px-3 py-2 text-sm text-gray-400">
+        <Link to="/profile"
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
           <User size={18} />
           <span className="truncate">{user?.name}</span>
-        </div>
+        </Link>
         <button onClick={handleLogout}
           className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-gray-800 hover:text-white transition-colors">
           <LogOut size={18} />

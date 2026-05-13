@@ -141,3 +141,44 @@ const resetPassword = async (req, res) => {
 };
 
 module.exports = { register, login, getMe, forgotPassword, verifyOTP, resetPassword };
+
+// UPDATE PROFILE
+const updateProfile = async (req, res) => {
+  const { name } = req.body;
+  try {
+    const result = await pool.query(
+      "UPDATE users SET name = $1 WHERE id = $2 RETURNING id, name, email, role",
+      [name, req.user.id]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// CHANGE PASSWORD
+const changePassword = async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  try {
+    const result = await pool.query(
+      "SELECT password_hash FROM users WHERE id = $1", [req.user.id]
+    );
+    const match = await bcrypt.compare(currentPassword, result.rows[0].password_hash);
+    if (!match) return res.status(400).json({ error: "Current password is incorrect" });
+
+    const password_hash = await bcrypt.hash(newPassword, 10);
+    await pool.query(
+      "UPDATE users SET password_hash = $1 WHERE id = $2",
+      [password_hash, req.user.id]
+    );
+    res.json({ message: "Password changed successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+module.exports = {
+  register, login, getMe,
+  forgotPassword, verifyOTP, resetPassword,
+  updateProfile, changePassword
+};

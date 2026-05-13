@@ -29,8 +29,13 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  // new — lets profile page update the name in sidebar instantly
+  const updateUser = (updatedData) => {
+    setUser((prev) => ({ ...prev, ...updatedData }));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, loginUser, logout }}>
+    <AuthContext.Provider value={{ user, loading, loginUser, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
