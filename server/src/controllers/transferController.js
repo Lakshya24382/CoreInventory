@@ -105,4 +105,20 @@ const validate = async (req, res) => {
   }
 };
 
-module.exports = { getAll, create, validate };
+const remove = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("DELETE FROM transfer_lines WHERE transfer_id = $1", [req.params.id]);
+    await client.query("DELETE FROM transfers WHERE id = $1", [req.params.id]);
+    await client.query("COMMIT");
+    res.json({ message: "Transfer deleted" });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+};
+
+module.exports = { getAll, create, validate, remove };

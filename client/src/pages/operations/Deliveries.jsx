@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { getDeliveries, createDelivery, validateDelivery } from "../../api/operations";
+import { getDeliveries, createDelivery, validateDelivery, deleteDelivery } from "../../api/operations";
 import { getProducts } from "../../api/products";
 import Layout from "../../components/Layout";
 import toast from "react-hot-toast";
-import { Plus, CheckCircle } from "lucide-react";
+import { Plus, CheckCircle, Trash2 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 export default function Deliveries() {
@@ -11,8 +11,8 @@ export default function Deliveries() {
   const isManager = user?.role === "manager";
 
   const [deliveries, setDeliveries] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [showModal, setShowModal] = useState(false);
+  const [products, setProducts]     = useState([]);
+  const [showModal, setShowModal]   = useState(false);
   const [form, setForm] = useState({ customer_name: "", source_location_id: 1, lines: [{ product_id: "", quantity: 1 }] });
 
   const load = () => getDeliveries().then((r) => setDeliveries(r.data));
@@ -53,6 +53,17 @@ export default function Deliveries() {
     }
   };
 
+  const handleDelete = async (id) => {
+    if (!confirm("Discard this delivery? This cannot be undone.")) return;
+    try {
+      await deleteDelivery(id);
+      toast.success("Delivery discarded");
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed");
+    }
+  };
+
   return (
     <Layout>
       <div className="flex items-center justify-between mb-6">
@@ -69,7 +80,7 @@ export default function Deliveries() {
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-600 text-left">
-            <tr>{["Reference","Customer","Status","Created",""].map(h => (
+            <tr>{["Reference", "Customer", "Status", "Created", ""].map(h => (
               <th key={h} className="px-4 py-3 font-medium">{h}</th>
             ))}</tr>
           </thead>
@@ -85,12 +96,21 @@ export default function Deliveries() {
                 </td>
                 <td className="px-4 py-3 text-gray-400">{new Date(d.created_at).toLocaleDateString()}</td>
                 <td className="px-4 py-3">
-                  {d.status !== "done" && isManager && (
-                    <button onClick={() => handleValidate(d.id)}
-                      className="flex items-center gap-1 text-green-600 hover:text-green-700 text-xs font-medium">
+                  <div className="flex items-center gap-3">
+                    {d.status !== "done" && isManager && (
+                      <button onClick={() => handleValidate(d.id)}
+                        className="flex items-center gap-1 text-green-600 hover:text-green-700 text-xs font-medium">
                         <CheckCircle size={14} /> Validate
-                    </button>
-                  )}
+                      </button>
+                    )}
+                    {isManager && (
+                      <button onClick={() => handleDelete(d.id)}
+                        className="text-gray-400 hover:text-red-500 transition-colors"
+                        title="Discard">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -115,7 +135,8 @@ export default function Deliveries() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-sm font-medium text-gray-700">Products</label>
-                  <button type="button" onClick={addLine} className="text-xs text-indigo-600 hover:underline">+ Add line</button>
+                  <button type="button" onClick={addLine}
+                    className="text-xs text-indigo-600 hover:underline">+ Add line</button>
                 </div>
                 {form.lines.map((line, i) => (
                   <div key={i} className="flex gap-2 mb-2">
@@ -132,9 +153,14 @@ export default function Deliveries() {
                 ))}
               </div>
               <div className="flex gap-2 pt-2">
-                <button type="submit" className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium">Create</button>
+                <button type="submit"
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium">
+                  Create
+                </button>
                 <button type="button" onClick={() => setShowModal(false)}
-                  className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+                  className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50">
+                  Cancel
+                </button>
               </div>
             </form>
           </div>

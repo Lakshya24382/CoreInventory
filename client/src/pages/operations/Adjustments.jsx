@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { getAdjustments, createAdjustment, validateAdjustment } from "../../api/operations";
+import { getAdjustments, createAdjustment, validateAdjustment, deleteAdjustment } from "../../api/operations";
 import { getProducts } from "../../api/products";
 import Layout from "../../components/Layout";
 import toast from "react-hot-toast";
-import { Plus, CheckCircle } from "lucide-react";
+import { Plus, CheckCircle, Trash2 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 const locations = [
@@ -15,9 +15,10 @@ const locations = [
 export default function Adjustments() {
   const { user } = useAuth();
   const isManager = user?.role === "manager";
+
   const [adjustments, setAdjustments] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [showModal, setShowModal] = useState(false);
+  const [products, setProducts]       = useState([]);
+  const [showModal, setShowModal]     = useState(false);
   const [form, setForm] = useState({ location_id: 1, reason: "", lines: [{ product_id: "", recorded_qty: 0, actual_qty: 0 }] });
 
   const load = () => getAdjustments().then((r) => setAdjustments(r.data));
@@ -25,6 +26,7 @@ export default function Adjustments() {
   useEffect(() => { load(); getProducts().then((r) => setProducts(r.data)); }, []);
 
   const addLine = () => setForm({ ...form, lines: [...form.lines, { product_id: "", recorded_qty: 0, actual_qty: 0 }] });
+
   const updateLine = (i, key, val) => {
     const lines = [...form.lines]; lines[i][key] = val; setForm({ ...form, lines });
   };
@@ -47,6 +49,15 @@ export default function Adjustments() {
     } catch (err) { toast.error(err.response?.data?.error || "Failed"); }
   };
 
+  const handleDelete = async (id) => {
+    if (!confirm("Discard this adjustment? This cannot be undone.")) return;
+    try {
+      await deleteAdjustment(id);
+      toast.success("Adjustment discarded");
+      load();
+    } catch (err) { toast.error(err.response?.data?.error || "Failed"); }
+  };
+
   return (
     <Layout>
       <div className="flex items-center justify-between mb-6">
@@ -63,7 +74,7 @@ export default function Adjustments() {
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-600 text-left">
-            <tr>{["Reference","Location","Reason","Status","Created",""].map(h => (
+            <tr>{["Reference", "Location", "Reason", "Status", "Created", ""].map(h => (
               <th key={h} className="px-4 py-3 font-medium">{h}</th>
             ))}</tr>
           </thead>
@@ -80,12 +91,21 @@ export default function Adjustments() {
                 </td>
                 <td className="px-4 py-3 text-gray-400">{new Date(a.created_at).toLocaleDateString()}</td>
                 <td className="px-4 py-3">
-                  {a.status !== "done" && isManager && (
-                    <button onClick={() => handleValidate(a.id)}
-                      className="flex items-center gap-1 text-green-600 hover:text-green-700 text-xs font-medium">
-                      <CheckCircle size={14} /> Validate
-                    </button>
-                  )}
+                  <div className="flex items-center gap-3">
+                    {a.status !== "done" && isManager && (
+                      <button onClick={() => handleValidate(a.id)}
+                        className="flex items-center gap-1 text-green-600 hover:text-green-700 text-xs font-medium">
+                        <CheckCircle size={14} /> Validate
+                      </button>
+                    )}
+                    {isManager && (
+                      <button onClick={() => handleDelete(a.id)}
+                        className="text-gray-400 hover:text-red-500 transition-colors"
+                        title="Discard">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -103,25 +123,29 @@ export default function Adjustments() {
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                <select value={form.location_id} onChange={(e) => setForm({ ...form, location_id: parseInt(e.target.value) })}
+                <select value={form.location_id}
+                  onChange={(e) => setForm({ ...form, location_id: parseInt(e.target.value) })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                   {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
-                <input value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })}
+                <input value={form.reason}
+                  onChange={(e) => setForm({ ...form, reason: e.target.value })}
                   placeholder="e.g. Damaged goods, Physical count"
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-sm font-medium text-gray-700">Products</label>
-                  <button type="button" onClick={addLine} className="text-xs text-indigo-600 hover:underline">+ Add line</button>
+                  <button type="button" onClick={addLine}
+                    className="text-xs text-indigo-600 hover:underline">+ Add line</button>
                 </div>
                 {form.lines.map((line, i) => (
                   <div key={i} className="flex gap-2 mb-2">
-                    <select required value={line.product_id} onChange={(e) => updateLine(i, "product_id", e.target.value)}
+                    <select required value={line.product_id}
+                      onChange={(e) => updateLine(i, "product_id", e.target.value)}
                       className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                       <option value="">Product</option>
                       {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -137,9 +161,14 @@ export default function Adjustments() {
                 <p className="text-xs text-gray-400 mt-1">Recorded = what system shows · Actual = what you physically counted</p>
               </div>
               <div className="flex gap-2 pt-2">
-                <button type="submit" className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium">Create</button>
+                <button type="submit"
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium">
+                  Create
+                </button>
                 <button type="button" onClick={() => setShowModal(false)}
-                  className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+                  className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50">
+                  Cancel
+                </button>
               </div>
             </form>
           </div>

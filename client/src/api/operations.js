@@ -13,3 +13,7 @@ export const getAdjustments = () => api.get("/adjustments");
 export const createAdjustment = (data) => api.post("/adjustments", data);
 export const validateAdjustment = (id) => api.post(`/adjustments/${id}/validate`);
 export const getMoves = () => api.get("/moves");
+export const deleteReceipt    = (id) => api.delete(`/receipts/${id}`);
+export const deleteDelivery   = (id) => api.delete(`/deliveries/${id}`);
+export const deleteTransfer   = (id) => api.delete(`/transfers/${id}`);
+export const deleteAdjustment = (id) => api.delete(`/adjustments/${id}`);

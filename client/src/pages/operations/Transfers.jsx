@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { getTransfers, createTransfer, validateTransfer } from "../../api/operations";
+import { getTransfers, createTransfer, validateTransfer, deleteTransfer } from "../../api/operations";
 import { getProducts } from "../../api/products";
 import Layout from "../../components/Layout";
 import toast from "react-hot-toast";
-import { Plus, CheckCircle } from "lucide-react";
+import { Plus, CheckCircle, Trash2 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 const locations = [
@@ -15,8 +15,9 @@ const locations = [
 export default function Transfers() {
   const { user } = useAuth();
   const isManager = user?.role === "manager";
+
   const [transfers, setTransfers] = useState([]);
-  const [products, setProducts] = useState([]);
+  const [products, setProducts]   = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ from_location_id: 1, to_location_id: 4, lines: [{ product_id: "", quantity: 1 }] });
 
@@ -25,6 +26,7 @@ export default function Transfers() {
   useEffect(() => { load(); getProducts().then((r) => setProducts(r.data)); }, []);
 
   const addLine = () => setForm({ ...form, lines: [...form.lines, { product_id: "", quantity: 1 }] });
+
   const updateLine = (i, key, val) => {
     const lines = [...form.lines]; lines[i][key] = val; setForm({ ...form, lines });
   };
@@ -47,6 +49,15 @@ export default function Transfers() {
     } catch (err) { toast.error(err.response?.data?.error || "Insufficient stock"); }
   };
 
+  const handleDelete = async (id) => {
+    if (!confirm("Discard this transfer? This cannot be undone.")) return;
+    try {
+      await deleteTransfer(id);
+      toast.success("Transfer discarded");
+      load();
+    } catch (err) { toast.error(err.response?.data?.error || "Failed"); }
+  };
+
   return (
     <Layout>
       <div className="flex items-center justify-between mb-6">
@@ -63,7 +74,7 @@ export default function Transfers() {
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-600 text-left">
-            <tr>{["Reference","From","To","Status","Created",""].map(h => (
+            <tr>{["Reference", "From", "To", "Status", "Created", ""].map(h => (
               <th key={h} className="px-4 py-3 font-medium">{h}</th>
             ))}</tr>
           </thead>
@@ -80,12 +91,21 @@ export default function Transfers() {
                 </td>
                 <td className="px-4 py-3 text-gray-400">{new Date(t.created_at).toLocaleDateString()}</td>
                 <td className="px-4 py-3">
-                  {t.status !== "done" && isManager && (
-                    <button onClick={() => handleValidate(t.id)}
-                      className="flex items-center gap-1 text-green-600 hover:text-green-700 text-xs font-medium">
-                      <CheckCircle size={14} /> Validate
-                    </button>
-                  )}
+                  <div className="flex items-center gap-3">
+                    {t.status !== "done" && isManager && (
+                      <button onClick={() => handleValidate(t.id)}
+                        className="flex items-center gap-1 text-green-600 hover:text-green-700 text-xs font-medium">
+                        <CheckCircle size={14} /> Validate
+                      </button>
+                    )}
+                    {isManager && (
+                      <button onClick={() => handleDelete(t.id)}
+                        className="text-gray-400 hover:text-red-500 transition-colors"
+                        title="Discard">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -105,7 +125,8 @@ export default function Transfers() {
                 {[["from_location_id","From"],["to_location_id","To"]].map(([key, label]) => (
                   <div key={key}>
                     <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-                    <select value={form[key]} onChange={(e) => setForm({ ...form, [key]: parseInt(e.target.value) })}
+                    <select value={form[key]}
+                      onChange={(e) => setForm({ ...form, [key]: parseInt(e.target.value) })}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                       {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
                     </select>
@@ -115,11 +136,13 @@ export default function Transfers() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-sm font-medium text-gray-700">Products</label>
-                  <button type="button" onClick={addLine} className="text-xs text-indigo-600 hover:underline">+ Add line</button>
+                  <button type="button" onClick={addLine}
+                    className="text-xs text-indigo-600 hover:underline">+ Add line</button>
                 </div>
                 {form.lines.map((line, i) => (
                   <div key={i} className="flex gap-2 mb-2">
-                    <select required value={line.product_id} onChange={(e) => updateLine(i, "product_id", e.target.value)}
+                    <select required value={line.product_id}
+                      onChange={(e) => updateLine(i, "product_id", e.target.value)}
                       className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
                       <option value="">Select product</option>
                       {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -131,9 +154,14 @@ export default function Transfers() {
                 ))}
               </div>
               <div className="flex gap-2 pt-2">
-                <button type="submit" className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium">Create</button>
+                <button type="submit"
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium">
+                  Create
+                </button>
                 <button type="button" onClick={() => setShowModal(false)}
-                  className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+                  className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50">
+                  Cancel
+                </button>
               </div>
             </form>
           </div>

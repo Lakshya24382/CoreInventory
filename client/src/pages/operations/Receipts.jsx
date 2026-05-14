@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { getReceipts, createReceipt, validateReceipt } from "../../api/operations";
+import { getReceipts, createReceipt, validateReceipt, deleteReceipt } from "../../api/operations";
 import { getProducts } from "../../api/products";
 import Layout from "../../components/Layout";
 import toast from "react-hot-toast";
-import { Plus, CheckCircle } from "lucide-react";
+import { Plus, CheckCircle, Trash2 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 const statusColors = {
@@ -58,6 +58,17 @@ export default function Receipts() {
     }
   };
 
+  const handleDelete = async (id) => {
+    if (!confirm("Discard this receipt? This cannot be undone.")) return;
+    try {
+      await deleteReceipt(id);
+      toast.success("Receipt discarded");
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed");
+    }
+  };
+
   return (
     <Layout>
       <div className="flex items-center justify-between mb-6">
@@ -90,12 +101,21 @@ export default function Receipts() {
                 </td>
                 <td className="px-4 py-3 text-gray-400">{new Date(r.created_at).toLocaleDateString()}</td>
                 <td className="px-4 py-3">
-                  {r.status !== "done" && isManager && (
-                    <button onClick={() => handleValidate(r.id)}
-                      className="flex items-center gap-1 text-green-600 hover:text-green-700 text-xs font-medium">
-                      <CheckCircle size={14} /> Validate
-                    </button>
-                  )}
+                  <div className="flex items-center gap-3">
+                    {r.status !== "done" && isManager && (
+                      <button onClick={() => handleValidate(r.id)}
+                        className="flex items-center gap-1 text-green-600 hover:text-green-700 text-xs font-medium">
+                        <CheckCircle size={14} /> Validate
+                      </button>
+                    )}
+                    {isManager && (
+                      <button onClick={() => handleDelete(r.id)}
+                        className="text-gray-400 hover:text-red-500 transition-colors"
+                        title="Discard">
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
