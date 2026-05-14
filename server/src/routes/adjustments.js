@@ -5,7 +5,6 @@ const managerOnly = require("../middleware/managerOnly");
 const { getAll, create, validate, remove } = require("../controllers/adjustmentController");
 
 router.get("/",              auth,            getAll);
-router.get("/:id",           auth,            getOne);
 router.post("/",             auth,            create);
 router.post("/:id/validate", auth, managerOnly, validate);
 router.delete("/:id", auth, managerOnly, remove);
