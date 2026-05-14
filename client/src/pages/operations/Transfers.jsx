@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
-import { getTransfers, createTransfer, validateTransfer, deleteTransfer } from "../../api/operations";
+import { getTransfers, createTransfer, validateTransfer, deleteTransfer, getTransfer } from "../../api/operations";
 import { getProducts } from "../../api/products";
 import Layout from "../../components/Layout";
 import toast from "react-hot-toast";
 import { Plus, CheckCircle, Trash2 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import OperationDetailModal from "../../components/OperationDetailModal";
+
+const statusColors = {
+  draft: "bg-gray-100 text-gray-600",
+  done:  "bg-green-100 text-green-700",
+};
 
 const locations = [
   { id: 1, name: "Main Store" }, { id: 2, name: "Rack A" },
@@ -19,11 +25,22 @@ export default function Transfers() {
   const [transfers, setTransfers] = useState([]);
   const [products, setProducts]   = useState([]);
   const [showModal, setShowModal] = useState(false);
+  const [selected, setSelected]   = useState(null);
   const [form, setForm] = useState({ from_location_id: 1, to_location_id: 4, lines: [{ product_id: "", quantity: 1 }] });
 
   const load = () => getTransfers().then((r) => setTransfers(r.data));
 
   useEffect(() => { load(); getProducts().then((r) => setProducts(r.data)); }, []);
+
+  const handleRowClick = async (id) => {
+    if (!isManager) return;
+    try {
+      const res = await getTransfer(id);
+      setSelected(res.data);
+    } catch {
+      toast.error("Could not load details");
+    }
+  };
 
   const addLine = () => setForm({ ...form, lines: [...form.lines, { product_id: "", quantity: 1 }] });
 
@@ -45,6 +62,7 @@ export default function Transfers() {
     try {
       await validateTransfer(id);
       toast.success("Stock moved!");
+      setSelected(null);
       load();
     } catch (err) { toast.error(err.response?.data?.error || "Insufficient stock"); }
   };
@@ -54,6 +72,7 @@ export default function Transfers() {
     try {
       await deleteTransfer(id);
       toast.success("Transfer discarded");
+      setSelected(null);
       load();
     } catch (err) { toast.error(err.response?.data?.error || "Failed"); }
   };
@@ -74,48 +93,64 @@ export default function Transfers() {
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-600 text-left">
-            <tr>{["Reference", "From", "To", "Status", "Created", ""].map(h => (
-              <th key={h} className="px-4 py-3 font-medium">{h}</th>
-            ))}</tr>
+            <tr>
+              <th className="px-4 py-3 font-medium">Reference</th>
+              <th className="px-4 py-3 font-medium">Status</th>
+              <th className="px-4 py-3 font-medium">Created</th>
+              {isManager && <th className="px-4 py-3 font-medium"></th>}
+            </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {transfers.map((t) => (
-              <tr key={t.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 font-mono text-gray-700">{t.reference}</td>
-                <td className="px-4 py-3 text-gray-600">{t.from_location_name}</td>
-                <td className="px-4 py-3 text-gray-600">{t.to_location_name}</td>
+              <tr key={t.id}
+                onClick={() => handleRowClick(t.id)}
+                className={`hover:bg-gray-50 ${isManager ? "cursor-pointer" : ""}`}>
+                <td className="px-4 py-3 font-mono text-indigo-600 font-medium">{t.reference}</td>
                 <td className="px-4 py-3">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${t.status === "done" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[t.status] || statusColors.draft}`}>
                     {t.status}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-gray-400">{new Date(t.created_at).toLocaleDateString()}</td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    {t.status !== "done" && isManager && (
-                      <button onClick={() => handleValidate(t.id)}
-                        className="flex items-center gap-1 text-green-600 hover:text-green-700 text-xs font-medium">
-                        <CheckCircle size={14} /> Validate
-                      </button>
-                    )}
-                    {isManager && (
+                {isManager && (
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-3">
+                      {t.status !== "done" && (
+                        <button onClick={() => handleValidate(t.id)}
+                          className="flex items-center gap-1 text-green-600 hover:text-green-700 text-xs font-medium">
+                          <CheckCircle size={14} /> Validate
+                        </button>
+                      )}
                       <button onClick={() => handleDelete(t.id)}
-                        className="text-gray-400 hover:text-red-500 transition-colors"
-                        title="Discard">
+                        className="text-gray-400 hover:text-red-500 transition-colors" title="Discard">
                         <Trash2 size={14} />
                       </button>
-                    )}
-                  </div>
-                </td>
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
             {transfers.length === 0 && (
-              <tr><td colSpan={6} className="text-center py-10 text-gray-400">No transfers yet</td></tr>
+              <tr><td colSpan={isManager ? 4 : 3} className="text-center py-10 text-gray-400">No transfers yet</td></tr>
             )}
           </tbody>
         </table>
       </div>
 
+      {isManager && (
+        <p className="text-xs text-gray-400 mt-2">Click any row to view full details</p>
+      )}
+
+      {/* Detail modal */}
+      {selected && (
+        <OperationDetailModal
+          operation={selected}
+          type="transfer"
+          onClose={() => setSelected(null)}
+        />
+      )}
+
+      {/* Create modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
