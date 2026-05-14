@@ -14,6 +14,7 @@ export default function Deliveries() {
   const [deliveries, setDeliveries] = useState([]);
   const [products, setProducts]     = useState([]);
   const [showModal, setShowModal]   = useState(false);
+  const [selected, setSelected]       = useState(null);
   const [form, setForm] = useState({ customer_name: "", source_location_id: 1, lines: [{ product_id: "", quantity: 1 }] });
 
   const load = () => getDeliveries().then((r) => setDeliveries(r.data));
