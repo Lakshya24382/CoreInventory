@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
-import { getAdjustments, createAdjustment, validateAdjustment, deleteAdjustment } from "../../api/operations";
+import { getAdjustments, createAdjustment, validateAdjustment, deleteAdjustment, getAdjustment } from "../../api/operations";
 import { getProducts, getProductStock } from "../../api/products";
 import Layout from "../../components/Layout";
 import toast from "react-hot-toast";
 import { Plus, CheckCircle, Trash2, Loader } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import OperationDetailModal from "../../components/OperationDetailModal";
+
+const statusColors = {
+  draft: "bg-gray-100 text-gray-600",
+  done:  "bg-green-100 text-green-700",
+};
 
 const locations = [
   { id: 1, name: "Main Store" },
@@ -21,6 +27,7 @@ export default function Adjustments() {
   const [adjustments, setAdjustments] = useState([]);
   const [products, setProducts]       = useState([]);
   const [showModal, setShowModal]     = useState(false);
+  const [selected, setSelected]       = useState(null);
   const [fetchingStock, setFetchingStock] = useState({});
   const [form, setForm] = useState({
     location_id: 1,
@@ -32,15 +39,24 @@ export default function Adjustments() {
 
   useEffect(() => { load(); getProducts().then((r) => setProducts(r.data)); }, []);
 
+  const handleRowClick = async (id) => {
+    if (!isManager) return;
+    try {
+      const res = await getAdjustment(id);
+      setSelected(res.data);
+    } catch {
+      toast.error("Could not load details");
+    }
+  };
+
   const addLine = () =>
     setForm({ ...form, lines: [...form.lines, { product_id: "", recorded_qty: 0, actual_qty: "" }] });
 
-  // When product or location changes, auto-fetch recorded stock
   const handleProductChange = async (i, productId) => {
     const lines = [...form.lines];
-    lines[i].product_id  = productId;
+    lines[i].product_id   = productId;
     lines[i].recorded_qty = 0;
-    lines[i].actual_qty  = "";
+    lines[i].actual_qty   = "";
     setForm({ ...form, lines });
 
     if (!productId) return;
@@ -58,7 +74,6 @@ export default function Adjustments() {
     }
   };
 
-  // When location changes, re-fetch all selected products' stock
   const handleLocationChange = async (locationId) => {
     setForm((prev) => ({ ...prev, location_id: locationId }));
     const updated = [...form.lines];
@@ -95,6 +110,7 @@ export default function Adjustments() {
     try {
       await validateAdjustment(id);
       toast.success("Stock corrected!");
+      setSelected(null);
       load();
     } catch (err) { toast.error(err.response?.data?.error || "Failed"); }
   };
@@ -104,6 +120,7 @@ export default function Adjustments() {
     try {
       await deleteAdjustment(id);
       toast.success("Adjustment discarded");
+      setSelected(null);
       load();
     } catch (err) { toast.error(err.response?.data?.error || "Failed"); }
   };
@@ -124,49 +141,64 @@ export default function Adjustments() {
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-600 text-left">
-            <tr>{["Reference", "Location", "Reason", "Status", "Created", ""].map(h => (
-              <th key={h} className="px-4 py-3 font-medium">{h}</th>
-            ))}</tr>
+            <tr>
+              <th className="px-4 py-3 font-medium">Reference</th>
+              <th className="px-4 py-3 font-medium">Status</th>
+              <th className="px-4 py-3 font-medium">Created</th>
+              {isManager && <th className="px-4 py-3 font-medium"></th>}
+            </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {adjustments.map((a) => (
-              <tr key={a.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 font-mono text-gray-700">{a.reference}</td>
-                <td className="px-4 py-3 text-gray-600">{a.location_name}</td>
-                <td className="px-4 py-3 text-gray-500">{a.reason || "—"}</td>
+              <tr key={a.id}
+                onClick={() => handleRowClick(a.id)}
+                className={`hover:bg-gray-50 ${isManager ? "cursor-pointer" : ""}`}>
+                <td className="px-4 py-3 font-mono text-indigo-600 font-medium">{a.reference}</td>
                 <td className="px-4 py-3">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    a.status === "done" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
-                  }`}>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[a.status] || statusColors.draft}`}>
                     {a.status}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-gray-400">{new Date(a.created_at).toLocaleDateString()}</td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    {a.status !== "done" && isManager && (
-                      <button onClick={() => handleValidate(a.id)}
-                        className="flex items-center gap-1 text-green-600 hover:text-green-700 text-xs font-medium">
-                        <CheckCircle size={14} /> Validate
-                      </button>
-                    )}
-                    {isManager && (
+                {isManager && (
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-3">
+                      {a.status !== "done" && (
+                        <button onClick={() => handleValidate(a.id)}
+                          className="flex items-center gap-1 text-green-600 hover:text-green-700 text-xs font-medium">
+                          <CheckCircle size={14} /> Validate
+                        </button>
+                      )}
                       <button onClick={() => handleDelete(a.id)}
                         className="text-gray-400 hover:text-red-500 transition-colors" title="Discard">
                         <Trash2 size={14} />
                       </button>
-                    )}
-                  </div>
-                </td>
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
             {adjustments.length === 0 && (
-              <tr><td colSpan={6} className="text-center py-10 text-gray-400">No adjustments yet</td></tr>
+              <tr><td colSpan={isManager ? 4 : 3} className="text-center py-10 text-gray-400">No adjustments yet</td></tr>
             )}
           </tbody>
         </table>
       </div>
 
+      {isManager && (
+        <p className="text-xs text-gray-400 mt-2">Click any row to view full details</p>
+      )}
+
+      {/* Detail modal */}
+      {selected && (
+        <OperationDetailModal
+          operation={selected}
+          type="adjustment"
+          onClose={() => setSelected(null)}
+        />
+      )}
+
+      {/* Create modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
@@ -197,7 +229,6 @@ export default function Adjustments() {
                     className="text-xs text-indigo-600 hover:underline">+ Add line</button>
                 </div>
 
-                {/* Column headers */}
                 <div className="grid grid-cols-3 gap-2 mb-1 px-1">
                   <span className="text-xs text-gray-400">Product</span>
                   <span className="text-xs text-gray-400">Recorded</span>
@@ -206,7 +237,6 @@ export default function Adjustments() {
 
                 {form.lines.map((line, i) => (
                   <div key={i} className="grid grid-cols-3 gap-2 mb-2 items-center">
-                    {/* Product selector */}
                     <select required value={line.product_id}
                       onChange={(e) => handleProductChange(i, e.target.value)}
                       className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -214,7 +244,6 @@ export default function Adjustments() {
                       {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
 
-                    {/* Recorded qty — read only, auto filled */}
                     <div className="relative">
                       <input
                         readOnly
@@ -226,7 +255,6 @@ export default function Adjustments() {
                       )}
                     </div>
 
-                    {/* Actual qty — user input */}
                     <input
                       type="number" min="0" required
                       placeholder="Enter actual"
