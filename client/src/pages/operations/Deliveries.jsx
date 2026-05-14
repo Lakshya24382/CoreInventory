@@ -23,6 +23,16 @@ export default function Deliveries() {
     getProducts().then((r) => setProducts(r.data));
   }, []);
 
+  const handleRowClick = async (id) => {
+    if (!isManager) return;
+    try {
+      const res = await getDelivery(id);
+      setSelected(res.data);
+    } catch {
+      toast.error("Could not load details");
+    }
+  };
+
   const addLine = () => setForm({ ...form, lines: [...form.lines, { product_id: "", quantity: 1 }] });
 
   const updateLine = (i, key, val) => {
@@ -87,7 +97,9 @@ export default function Deliveries() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {deliveries.map((d) => (
-              <tr key={d.id} className="hover:bg-gray-50">
+              <tr key={d.id} 
+                onClick={() => handleRowClick(d.id)}
+                className="hover:bg-gray-50">
                 <td className="px-4 py-3 font-mono text-gray-700">{d.reference}</td>
                 <td className="px-4 py-3 text-gray-600">{d.customer_name}</td>
                 <td className="px-4 py-3">
@@ -96,7 +108,7 @@ export default function Deliveries() {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-gray-400">{new Date(d.created_at).toLocaleDateString()}</td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-3">
                     {d.status !== "done" && isManager && (
                       <button onClick={() => handleValidate(d.id)}
