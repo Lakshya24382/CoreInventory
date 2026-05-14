@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getDeliveries, createDelivery, validateDelivery, deleteDelivery } from "../../api/operations";
+import { getDeliveries, getDelivery, createDelivery, validateDelivery, deleteDelivery } from "../../api/operations";
 import { getProducts } from "../../api/products";
 import Layout from "../../components/Layout";
 import toast from "react-hot-toast";
@@ -156,7 +156,7 @@ export default function Deliveries() {
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Name</label>
-                <input required value={form.supplier_name}
+                <input required value={form.customer_name_name}
                   onChange={(e) => setForm({ ...form, supplier_name: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
               </div>
