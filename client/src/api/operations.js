@@ -17,3 +17,7 @@ export const deleteReceipt    = (id) => api.delete(`/receipts/${id}`);
 export const deleteDelivery   = (id) => api.delete(`/deliveries/${id}`);
 export const deleteTransfer   = (id) => api.delete(`/transfers/${id}`);
 export const deleteAdjustment = (id) => api.delete(`/adjustments/${id}`);
+export const getReceipt    = (id) => api.get(`/receipts/${id}`);
+export const getDelivery   = (id) => api.get(`/deliveries/${id}`);
+export const getTransfer   = (id) => api.get(`/transfers/${id}`);
+export const getAdjustment = (id) => api.get(`/adjustments/${id}`);

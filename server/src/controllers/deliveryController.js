@@ -17,9 +17,13 @@ const getAll = async (req, res) => {
 const getOne = async (req, res) => {
   try {
     const delivery = await pool.query(
-      `SELECT d.*, l.name as location_name
+      `SELECT d.*,
+        l.name as location_name,
+        u.name as created_by_name,
+        u.employee_id as created_by_emp_id
        FROM deliveries d
        LEFT JOIN locations l ON l.id = d.source_location_id
+       LEFT JOIN users u ON u.id = d.created_by
        WHERE d.id = $1`,
       [req.params.id]
     );

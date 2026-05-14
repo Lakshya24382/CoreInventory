@@ -121,4 +121,34 @@ const remove = async (req, res) => {
   }
 };
 
-module.exports = { getAll, create, validate, remove };
+const getOne = async (req, res) => {
+  try {
+    const transfer = await pool.query(
+      `SELECT t.*,
+        fl.name as from_location_name,
+        tl.name as to_location_name,
+        u.name as created_by_name,
+        u.employee_id as created_by_emp_id
+       FROM transfers t
+       LEFT JOIN locations fl ON fl.id = t.from_location_id
+       LEFT JOIN locations tl ON tl.id = t.to_location_id
+       LEFT JOIN users u ON u.id = t.created_by
+       WHERE t.id = $1`,
+      [req.params.id]
+    );
+    if (!transfer.rows[0]) return res.status(404).json({ error: "Not found" });
+
+    const lines = await pool.query(
+      `SELECT tl.*, p.name as product_name, p.sku
+       FROM transfer_lines tl
+       JOIN products p ON p.id = tl.product_id
+       WHERE tl.transfer_id = $1`,
+      [req.params.id]
+    );
+    res.json({ ...transfer.rows[0], lines: lines.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+module.exports = { getAll, getOne, create, validate, remove };

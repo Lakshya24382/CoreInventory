@@ -5,6 +5,7 @@ import Layout from "../../components/Layout";
 import toast from "react-hot-toast";
 import { Plus, CheckCircle, Trash2 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import OperationDetailModal from "../../components/OperationDetailModal";
 
 export default function Deliveries() {
   const { user } = useAuth();
@@ -121,15 +122,29 @@ export default function Deliveries() {
         </table>
       </div>
 
+      {isManager && (
+        <p className="text-xs text-gray-400 mt-2">Click any row to view full details</p>
+      )}
+
+      {/* Detail modal */}
+      {selected && (
+        <OperationDetailModal
+          operation={selected}
+          type="delivery"
+          onClose={() => setSelected(null)}
+        />
+      )}
+
+      {/* Create modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-semibold mb-4">New Delivery</h2>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
-                <input required value={form.customer_name}
-                  onChange={(e) => setForm({ ...form, customer_name: e.target.value })}
+                <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Name</label>
+                <input required value={form.supplier_name}
+                  onChange={(e) => setForm({ ...form, supplier_name: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
               </div>
               <div>

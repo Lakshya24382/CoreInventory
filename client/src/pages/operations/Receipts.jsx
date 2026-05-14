@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { getReceipts, createReceipt, validateReceipt, deleteReceipt } from "../../api/operations";
+import { getReceipts, createReceipt, validateReceipt, deleteReceipt, getReceipt } from "../../api/operations";
 import { getProducts } from "../../api/products";
 import Layout from "../../components/Layout";
 import toast from "react-hot-toast";
 import { Plus, CheckCircle, Trash2 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import OperationDetailModal from "../../components/OperationDetailModal";
 
 const statusColors = {
   draft: "bg-gray-100 text-gray-600",
@@ -15,10 +16,14 @@ export default function Receipts() {
   const { user } = useAuth();
   const isManager = user?.role === "manager";
 
-  const [receipts, setReceipts] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ supplier_name: "", destination_location_id: 1, lines: [{ product_id: "", quantity: 1 }] });
+  const [receipts, setReceipts]       = useState([]);
+  const [products, setProducts]       = useState([]);
+  const [showModal, setShowModal]     = useState(false);
+  const [selected, setSelected]       = useState(null);
+  const [form, setForm] = useState({
+    supplier_name: "", destination_location_id: 1,
+    lines: [{ product_id: "", quantity: 1 }]
+  });
 
   const load = () => getReceipts().then((r) => setReceipts(r.data));
 
@@ -27,12 +32,19 @@ export default function Receipts() {
     getProducts().then((r) => setProducts(r.data));
   }, []);
 
-  const addLine = () => setForm({ ...form, lines: [...form.lines, { product_id: "", quantity: 1 }] });
+  const handleRowClick = async (id) => {
+    if (!isManager) return;
+    try {
+      const res = await getReceipt(id);
+      setSelected(res.data);
+    } catch {
+      toast.error("Could not load details");
+    }
+  };
 
+  const addLine    = () => setForm({ ...form, lines: [...form.lines, { product_id: "", quantity: 1 }] });
   const updateLine = (i, key, val) => {
-    const lines = [...form.lines];
-    lines[i][key] = val;
-    setForm({ ...form, lines });
+    const lines = [...form.lines]; lines[i][key] = val; setForm({ ...form, lines });
   };
 
   const handleCreate = async (e) => {
@@ -43,19 +55,16 @@ export default function Receipts() {
       setShowModal(false);
       setForm({ supplier_name: "", destination_location_id: 1, lines: [{ product_id: "", quantity: 1 }] });
       load();
-    } catch (err) {
-      toast.error(err.response?.data?.error || "Failed");
-    }
+    } catch (err) { toast.error(err.response?.data?.error || "Failed"); }
   };
 
   const handleValidate = async (id) => {
     try {
       await validateReceipt(id);
       toast.success("Stock updated!");
+      setSelected(null);
       load();
-    } catch (err) {
-      toast.error(err.response?.data?.error || "Failed");
-    }
+    } catch (err) { toast.error(err.response?.data?.error || "Failed"); }
   };
 
   const handleDelete = async (id) => {
@@ -63,10 +72,9 @@ export default function Receipts() {
     try {
       await deleteReceipt(id);
       toast.success("Receipt discarded");
+      setSelected(null);
       load();
-    } catch (err) {
-      toast.error(err.response?.data?.error || "Failed");
-    }
+    } catch (err) { toast.error(err.response?.data?.error || "Failed"); }
   };
 
   return (
@@ -85,47 +93,64 @@ export default function Receipts() {
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-gray-600 text-left">
-            <tr>{["Reference", "Supplier", "Status", "Created", ""].map(h => (
-              <th key={h} className="px-4 py-3 font-medium">{h}</th>
-            ))}</tr>
+            <tr>
+              <th className="px-4 py-3 font-medium">Reference</th>
+              <th className="px-4 py-3 font-medium">Status</th>
+              <th className="px-4 py-3 font-medium">Created</th>
+              {isManager && <th className="px-4 py-3 font-medium"></th>}
+            </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {receipts.map((r) => (
-              <tr key={r.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 font-mono text-gray-700">{r.reference}</td>
-                <td className="px-4 py-3 text-gray-600">{r.supplier_name}</td>
+              <tr key={r.id}
+                onClick={() => handleRowClick(r.id)}
+                className={`hover:bg-gray-50 ${isManager ? "cursor-pointer" : ""}`}>
+                <td className="px-4 py-3 font-mono text-indigo-600 font-medium">{r.reference}</td>
                 <td className="px-4 py-3">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[r.status] || statusColors.draft}`}>
                     {r.status}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-gray-400">{new Date(r.created_at).toLocaleDateString()}</td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    {r.status !== "done" && isManager && (
-                      <button onClick={() => handleValidate(r.id)}
-                        className="flex items-center gap-1 text-green-600 hover:text-green-700 text-xs font-medium">
-                        <CheckCircle size={14} /> Validate
-                      </button>
-                    )}
-                    {isManager && (
+                {isManager && (
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-3">
+                      {r.status !== "done" && (
+                        <button onClick={() => handleValidate(r.id)}
+                          className="flex items-center gap-1 text-green-600 hover:text-green-700 text-xs font-medium">
+                          <CheckCircle size={14} /> Validate
+                        </button>
+                      )}
                       <button onClick={() => handleDelete(r.id)}
-                        className="text-gray-400 hover:text-red-500 transition-colors"
-                        title="Discard">
+                        className="text-gray-400 hover:text-red-500 transition-colors" title="Discard">
                         <Trash2 size={14} />
                       </button>
-                    )}
-                  </div>
-                </td>
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
             {receipts.length === 0 && (
-              <tr><td colSpan={5} className="text-center py-10 text-gray-400">No receipts yet</td></tr>
+              <tr><td colSpan={isManager ? 4 : 3} className="text-center py-10 text-gray-400">No receipts yet</td></tr>
             )}
           </tbody>
         </table>
       </div>
 
+      {isManager && (
+        <p className="text-xs text-gray-400 mt-2">Click any row to view full details</p>
+      )}
+
+      {/* Detail modal */}
+      {selected && (
+        <OperationDetailModal
+          operation={selected}
+          type="receipt"
+          onClose={() => setSelected(null)}
+        />
+      )}
+
+      {/* Create modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
@@ -137,7 +162,6 @@ export default function Receipts() {
                   onChange={(e) => setForm({ ...form, supplier_name: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
               </div>
-
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-sm font-medium text-gray-700">Products</label>
@@ -158,7 +182,6 @@ export default function Receipts() {
                   </div>
                 ))}
               </div>
-
               <div className="flex gap-2 pt-2">
                 <button type="submit"
                   className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium">
