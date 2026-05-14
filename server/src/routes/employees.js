@@ -76,11 +76,30 @@ router.post("/", auth, managerOnly, async (req, res) => {
 
 // DELETE employee
 router.delete("/:id", auth, managerOnly, async (req, res) => {
+  const client = await pool.connect();
   try {
-    await pool.query("DELETE FROM users WHERE id = $1 AND role = 'staff'", [req.params.id]);
+    await client.query("BEGIN");
+
+    const id = req.params.id;
+
+    // Nullify all references to this user before deleting
+    await client.query("UPDATE receipts     SET created_by = NULL WHERE created_by = $1", [id]);
+    await client.query("UPDATE deliveries   SET created_by = NULL WHERE created_by = $1", [id]);
+    await client.query("UPDATE transfers    SET created_by = NULL WHERE created_by = $1", [id]);
+    await client.query("UPDATE adjustments  SET created_by = NULL WHERE created_by = $1", [id]);
+    await client.query("UPDATE stock_moves  SET created_by = NULL WHERE created_by = $1", [id]);
+
+    await client.query(
+      "DELETE FROM users WHERE id = $1 AND role = 'staff'", [id]
+    );
+
+    await client.query("COMMIT");
     res.json({ message: "Employee removed" });
   } catch (err) {
+    await client.query("ROLLBACK");
     res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 
