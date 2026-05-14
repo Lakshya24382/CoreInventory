@@ -154,9 +154,9 @@ export default function Deliveries() {
             <h2 className="text-lg font-semibold mb-4">New Delivery</h2>
             <form onSubmit={handleCreate} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
                 <input required value={form.customer_name_name}
-                  onChange={(e) => setForm({ ...form, supplier_name: e.target.value })}
+                  onChange={(e) => setForm({ ...form, customer_name: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
               </div>
               <div>
