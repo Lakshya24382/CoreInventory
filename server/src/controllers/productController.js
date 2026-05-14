@@ -8,10 +8,23 @@ const getAll = async (req, res) => {
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id
       LEFT JOIN stock_levels sl ON sl.product_id = p.id
+      WHERE p.is_archived = FALSE
       GROUP BY p.id, c.name
       ORDER BY p.created_at DESC
     `);
     res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const remove = async (req, res) => {
+  try {
+    await pool.query(
+      "UPDATE products SET is_archived = TRUE WHERE id = $1",
+      [req.params.id]
+    );
+    res.json({ message: "Product archived" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -62,33 +75,6 @@ const update = async (req, res) => {
   }
 };
 
-const remove = async (req, res) => {
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-
-    const id = req.params.id;
-
-    // Remove all related records first
-    await client.query("DELETE FROM stock_levels    WHERE product_id = $1", [id]);
-    await client.query("DELETE FROM receipt_lines   WHERE product_id = $1", [id]);
-    await client.query("DELETE FROM delivery_lines  WHERE product_id = $1", [id]);
-    await client.query("DELETE FROM transfer_lines  WHERE product_id = $1", [id]);
-    await client.query("DELETE FROM adjustment_lines WHERE product_id = $1", [id]);
-    await client.query("DELETE FROM stock_moves     WHERE product_id = $1", [id]);
-
-    await client.query("DELETE FROM products WHERE id = $1", [id]);
-
-    await client.query("COMMIT");
-    res.json({ message: "Product deleted" });
-  } catch (err) {
-    await client.query("ROLLBACK");
-    res.status(500).json({ error: err.message });
-  } finally {
-    client.release();
-  }
-};
-
 const getCategories = async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM categories ORDER BY name");
@@ -98,4 +84,34 @@ const getCategories = async (req, res) => {
   }
 };
 
-module.exports = { getAll, getOne, create, update, remove, getCategories };
+const getArchived = async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT p.*, c.name as category_name,
+        COALESCE(SUM(sl.quantity), 0) as total_stock
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      LEFT JOIN stock_levels sl ON sl.product_id = p.id
+      WHERE p.is_archived = TRUE
+      GROUP BY p.id, c.name
+      ORDER BY p.created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const restore = async (req, res) => {
+  try {
+    await pool.query(
+      "UPDATE products SET is_archived = FALSE WHERE id = $1",
+      [req.params.id]
+    );
+    res.json({ message: "Product restored" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+module.exports = { getAll, getOne, create, update, remove, getCategories, getArchived, restore };

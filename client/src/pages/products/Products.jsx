@@ -1,39 +1,42 @@
 import { useEffect, useState } from "react";
 import {
-  getProducts, getCategories,
-  createProduct, updateProduct, deleteProduct
+  getProducts, getCategories, createProduct,
+  updateProduct, deleteProduct,
+  getArchivedProducts, restoreProduct
 } from "../../api/products";
 import Layout from "../../components/Layout";
 import toast from "react-hot-toast";
-import { Plus, Trash2, Search, Pencil } from "lucide-react";
+import { Plus, Trash2, Search, Pencil, ArchiveRestore } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 const empty = { name: "", sku: "", category_id: "", unit_of_measure: "units", reorder_level: 0 };
 
 export default function Products() {
-  const { user }                          = useAuth();
-  const isManager                         = user?.role === "manager";
-  const [products, setProducts]           = useState([]);
-  const [categories, setCategories]       = useState([]);
-  const [form, setForm]                   = useState(empty);
-  const [editingId, setEditingId]         = useState(null);
-  const [search, setSearch]               = useState("");
-  const [showModal, setShowModal]         = useState(false);
+  const { user }                    = useAuth();
+  const isManager                   = user?.role === "manager";
+  const [tab, setTab]               = useState("active");
+  const [products, setProducts]     = useState([]);
+  const [archived, setArchived]     = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [form, setForm]             = useState(empty);
+  const [editingId, setEditingId]   = useState(null);
+  const [search, setSearch]         = useState("");
+  const [showModal, setShowModal]   = useState(false);
 
-  const load = () => getProducts().then((r) => setProducts(r.data));
+  const loadActive   = () => getProducts().then((r) => setProducts(r.data));
+  const loadArchived = () => getArchivedProducts().then((r) => setArchived(r.data));
 
   useEffect(() => {
-    load();
+    loadActive();
     getCategories().then((r) => setCategories(r.data));
   }, []);
 
-  const openCreate = () => {
-    setForm(empty);
-    setEditingId(null);
-    setShowModal(true);
-  };
+  useEffect(() => {
+    if (tab === "archived" && isManager) loadArchived();
+  }, [tab]);
 
-  const openEdit = (p) => {
+  const openCreate = () => { setForm(empty); setEditingId(null); setShowModal(true); };
+  const openEdit   = (p) => {
     setForm({
       name:            p.name,
       sku:             p.sku,
@@ -58,24 +61,36 @@ export default function Products() {
       setShowModal(false);
       setForm(empty);
       setEditingId(null);
-      load();
+      loadActive();
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed");
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("Delete this product?")) return;
+  const handleArchive = async (id) => {
+    if (!confirm("Archive this product? It won't appear in operations but history is preserved.")) return;
     try {
       await deleteProduct(id);
-      toast.success("Deleted");
-      load();
+      toast.success("Product archived");
+      loadActive();
     } catch {
-      toast.error("Cannot delete — stock may exist");
+      toast.error("Failed to archive");
     }
   };
 
-  const filtered = products.filter((p) =>
+  const handleRestore = async (id) => {
+    try {
+      await restoreProduct(id);
+      toast.success("Product restored");
+      loadArchived();
+      loadActive();
+    } catch {
+      toast.error("Failed to restore");
+    }
+  };
+
+  const list = tab === "active" ? products : archived;
+  const filtered = list.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
     p.sku.toLowerCase().includes(search.toLowerCase())
   );
@@ -89,13 +104,36 @@ export default function Products() {
             {isManager ? "Manage your product catalog" : "Browse the product catalog"}
           </p>
         </div>
-        {isManager && (
+        {isManager && tab === "active" && (
           <button onClick={openCreate}
             className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
             <Plus size={16} /> New Product
           </button>
         )}
       </div>
+
+      {/* Tabs — managers only */}
+      {isManager && (
+        <div className="flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit">
+          <button onClick={() => setTab("active")}
+            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              tab === "active" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+            }`}>
+            Active
+          </button>
+          <button onClick={() => setTab("archived")}
+            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              tab === "archived" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
+            }`}>
+            Archived
+            {archived.length > 0 && (
+              <span className="ml-1.5 bg-gray-200 text-gray-600 text-xs px-1.5 py-0.5 rounded-full">
+                {archived.length}
+              </span>
+            )}
+          </button>
+        </div>
+      )}
 
       <div className="relative mb-4">
         <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
@@ -117,7 +155,7 @@ export default function Products() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {filtered.map((p) => (
-              <tr key={p.id} className="hover:bg-gray-50">
+              <tr key={p.id} className={`hover:bg-gray-50 ${tab === "archived" ? "opacity-60" : ""}`}>
                 <td className="px-4 py-3 font-medium text-gray-800">{p.name}</td>
                 <td className="px-4 py-3 text-gray-500 font-mono">{p.sku}</td>
                 <td className="px-4 py-3 text-gray-500">{p.category_name || "—"}</td>
@@ -133,25 +171,33 @@ export default function Products() {
                 </td>
                 {isManager && (
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <button onClick={() => openEdit(p)}
-                        className="text-gray-400 hover:text-indigo-500 transition-colors">
-                        <Pencil size={15} />
+                    {tab === "active" ? (
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => openEdit(p)}
+                          className="text-gray-400 hover:text-indigo-500 transition-colors">
+                          <Pencil size={15} />
+                        </button>
+                        <button onClick={() => handleArchive(p.id)}
+                          className="text-gray-400 hover:text-red-500 transition-colors"
+                          title="Archive product">
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button onClick={() => handleRestore(p.id)}
+                        className="flex items-center gap-1 text-indigo-500 hover:text-indigo-700 text-xs font-medium"
+                        title="Restore product">
+                        <ArchiveRestore size={15} /> Restore
                       </button>
-                      <button onClick={() => handleDelete(p.id)}
-                        className="text-gray-400 hover:text-red-500 transition-colors">
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
+                    )}
                   </td>
                 )}
               </tr>
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={isManager ? 7 : 6}
-                  className="text-center py-10 text-gray-400">
-                  No products found
+                <td colSpan={isManager ? 7 : 6} className="text-center py-10 text-gray-400">
+                  {tab === "archived" ? "No archived products" : "No products found"}
                 </td>
               </tr>
             )}
